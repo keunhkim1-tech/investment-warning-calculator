@@ -296,47 +296,12 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>📋 종목 정보 입력</h2>
-
-    <div class="form-group">
-      <label for="stockName">종목명</label>
-      <input type="text" id="stockName" placeholder="예: 삼성전자, 카카오" />
-      <div id="autoFilledTag" style="display:none;">
-        <span class="auto-filled-tag">✓ KRX KIND에서 자동 입력됨</span>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="designationDate">지정일 (투자경고/위험 지정일)</label>
-      <input type="date" id="designationDate" />
-    </div>
-
-    <div class="form-group">
-      <label for="warningType">경보 유형</label>
-      <select id="warningType">
-        <option value="warning_normal">투자경고 — 일반 급등 유형 (초단기·단기·중장기·반복)</option>
-        <option value="warning_unfair">투자경고 — 불건전거래 동반 유형</option>
-        <option value="risk">투자위험종목</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="tradingStop">매매거래 정지 여부</label>
-      <select id="tradingStop">
-        <option value="no">없음 (정지 없이 지정)</option>
-        <option value="yes1">있음 — 지정일 당일 1일 정지</option>
-        <option value="yes2">있음 — 지정 후 추가 정지 포함 (직접 날짜 입력)</option>
-      </select>
-    </div>
-
-    <div class="form-group" id="resumeDateGroup" style="display:none;">
-      <label for="resumeDate">매매거래 재개일</label>
-      <input type="date" id="resumeDate" />
-    </div>
-
-    <button class="btn" onclick="calculate()">해제 예상일 계산하기</button>
-  </div>
+  <!-- hidden inputs — selectResult()가 채워주고 calculate()가 읽음 -->
+  <input type="hidden" id="stockName" />
+  <input type="hidden" id="designationDate" />
+  <input type="hidden" id="warningType" value="warning_normal" />
+  <input type="hidden" id="tradingStop" value="no" />
+  <input type="hidden" id="resumeDate" />
 
   <!-- Result -->
   <div class="result-card" id="resultCard">
@@ -700,11 +665,6 @@ function formatDate(d) {
 // ────────────────────────────────────────────────
 // 이벤트
 // ────────────────────────────────────────────────
-document.getElementById('tradingStop').addEventListener('change', function () {
-  document.getElementById('resumeDateGroup').style.display =
-    this.value === 'yes2' ? 'block' : 'none';
-});
-
 document.getElementById('designationDate').value = new Date().toISOString().slice(0, 10);
 
 // 외부 클릭 시 검색 결과 닫기
