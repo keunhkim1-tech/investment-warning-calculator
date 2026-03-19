@@ -464,11 +464,9 @@ function selectResult(r) {
   document.getElementById('stockName').value = r.stockName || document.getElementById('searchInput').value;
   document.getElementById('designationDate').value = r.designationDate;
   document.getElementById('warningType').value = r.level === '투자위험' ? 'risk' : 'warning_normal';
-  document.getElementById('autoFilledTag').style.display = 'block';
   document.getElementById('searchResults').classList.remove('show');
 
-  document.getElementById('stockName').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setTimeout(calculate, 300);
+  calculate();
 
   // 기준가 조회 (종목명으로 코드 검색 후 가격 fetch)
   fetchPriceThresholds(r.stockName);
