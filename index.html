@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>투자경고 해제일 계산기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container { width: 100%; max-width: 660px; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+    .header p  { font-size: 0.875rem; color: #94a3b8; }
+    .badge {
+      display: inline-block;
+      background: #1e3a5f; color: #60a5fa;
+      font-size: 0.75rem; font-weight: 600;
+      padding: 3px 10px; border-radius: 999px;
+      margin-bottom: 12px; border: 1px solid #2563eb44;
+    }
+
+    /* Card */
+    .card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 16px; padding: 28px; margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 1rem; font-weight: 600; color: #cbd5e1;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.8125rem; font-weight: 500; color: #94a3b8; margin-bottom: 6px; }
+
+    input[type="text"], input[type="date"], select {
+      width: 100%; background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; padding: 10px 14px; color: #f1f5f9;
+      font-size: 0.9375rem; outline: none; transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: #3b82f6; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+    select option { background: #1e293b; }
+
+    /* 검색 영역 */
+    .search-row { display: flex; gap: 8px; }
+    .search-row input { flex: 1; }
+    .search-btn {
+      flex-shrink: 0;
+      background: #0f4c81; border: 1px solid #1d4ed8;
+      color: #93c5fd; font-size: 0.8125rem; font-weight: 600;
+      border-radius: 8px; padding: 10px 16px; cursor: pointer;
+      white-space: nowrap; transition: background 0.15s;
+    }
+    .search-btn:hover { background: #1e3a5f; }
+    .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 검색 결과 드롭다운 */
+    .search-results {
+      margin-top: 8px;
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 10px; overflow: hidden;
+      display: none;
+    }
+    .search-results.show { display: block; }
+    .search-results-header {
+      font-size: 0.75rem; color: #64748b;
+      padding: 8px 14px; border-bottom: 1px solid #1e293b;
+    }
+    .result-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; cursor: pointer; transition: background 0.1s;
+      border-bottom: 1px solid #1a2436;
+    }
+    .result-item:last-child { border-bottom: none; }
+    .result-item:hover { background: #1e293b; }
+    .result-item-left { display: flex; flex-direction: column; gap: 3px; }
+    .result-stock-name { font-size: 0.9375rem; font-weight: 600; color: #e2e8f0; }
+    .result-level-badge {
+      display: inline-block; font-size: 0.6875rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .level-warning { background: #7c2d1233; color: #fb923c; border: 1px solid #c2410c44; }
+    .level-risk    { background: #450a0a33; color: #f87171; border: 1px solid #dc262644; }
+    .level-attention { background: #42300a33; color: #fbbf24; border: 1px solid #d9770644; }
+    .result-date { font-size: 0.875rem; font-weight: 700; color: #60a5fa; }
+    .result-empty {
+      padding: 20px 14px; text-align: center;
+      font-size: 0.875rem; color: #475569;
+    }
+    .search-loading {
+      padding: 16px; text-align: center;
+      font-size: 0.875rem; color: #64748b;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    /* 자동입력 표시 */
+    .auto-filled-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #14532d33; border: 1px solid #16a34a44;
+      color: #4ade80; font-size: 0.75rem; padding: 3px 8px;
+      border-radius: 4px; margin-top: 6px;
+    }
+
+    /* 서버 상태 알림 */
+    .server-notice {
+      background: #1e3a2422; border: 1px solid #2563eb33;
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+      font-size: 0.8rem; color: #94a3b8; line-height: 1.6;
+      display: none;
+    }
+    .server-notice.show { display: block; }
+    .server-notice a { color: #60a5fa; text-decoration: none; }
+
+    /* Buttons */
+    .btn {
+      width: 100%; background: #2563eb; color: #fff;
+      font-size: 0.9375rem; font-weight: 600; border: none;
+      border-radius: 10px; padding: 13px; cursor: pointer;
+      transition: background 0.15s, transform 0.1s; margin-top: 8px;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:active { transform: scale(0.99); }
+
+    /* Result */
+    .result-card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 16px; padding: 28px; margin-bottom: 16px; display: none;
+    }
+    .result-card.show { display: block; }
+    .result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .result-header h2 { font-size: 1rem; font-weight: 600; color: #cbd5e1; }
+    .stock-name-display { font-size: 1.375rem; font-weight: 700; color: #f59e0b; margin-bottom: 20px; }
+
+    .date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .date-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; }
+    .date-item .label { font-size: 0.75rem; color: #64748b; margin-bottom: 4px; }
+    .date-item .value { font-size: 1rem; font-weight: 700; color: #e2e8f0; }
+    .date-item.highlight { border-color: #2563eb66; background: #1e3a5f33; }
+    .date-item.highlight .value { color: #60a5fa; font-size: 1.125rem; }
+
+    .dday-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 999px;
+      font-size: 0.875rem; font-weight: 700; margin-bottom: 20px;
+    }
+    .dday-badge.past   { background: #14532d33; border: 1px solid #16a34a44; color: #4ade80; }
+    .dday-badge.today  { background: #1e3a5f44; border: 1px solid #2563eb44; color: #60a5fa; }
+    .dday-badge.future { background: #451a0344; border: 1px solid #d9770644; color: #fb923c; }
+
+    .divider { border: none; border-top: 1px solid #334155; margin: 20px 0; }
+
+    .conditions-title { font-size: 0.875rem; font-weight: 600; color: #94a3b8; margin-bottom: 12px; }
+    .condition-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; padding: 12px; margin-bottom: 8px;
+      font-size: 0.8125rem; color: #94a3b8; line-height: 1.5;
+    }
+    .condition-item .icon {
+      flex-shrink: 0; width: 18px; height: 18px;
+      background: #1e3a5f; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6875rem; color: #60a5fa; margin-top: 1px;
+    }
+    .warning-box {
+      background: #451a0322; border: 1px solid #d9770633;
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 0.8rem; color: #fbbf24; margin-top: 12px; line-height: 1.6;
+    }
+
+    /* 기준가 카드 */
+    .price-card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 16px; padding: 28px; margin-bottom: 16px; display: none;
+    }
+    .price-card.show { display: block; }
+    .price-card h2 { font-size: 1rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .price-meta { font-size: 0.8rem; color: #64748b; margin-bottom: 20px; }
+    .price-meta strong { color: #94a3b8; }
+
+    .thresh-row {
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 10px; padding: 16px; margin-bottom: 10px;
+    }
+    .thresh-row-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .thresh-label { font-size: 0.8125rem; font-weight: 700; color: #94a3b8; }
+    .thresh-status {
+      font-size: 0.75rem; font-weight: 700; padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .thresh-status.active  { background: #450a0a55; color: #f87171; border: 1px solid #ef444444; }
+    .thresh-status.inactive { background: #14532d44; color: #4ade80; border: 1px solid #16a34a44; }
+
+    .thresh-numbers {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    }
+    .thresh-num { text-align: center; }
+    .thresh-num .tn-label { font-size: 0.7rem; color: #475569; margin-bottom: 2px; }
+    .thresh-num .tn-value { font-size: 0.9375rem; font-weight: 700; color: #e2e8f0; }
+    .thresh-num .tn-value.red  { color: #f87171; }
+    .thresh-num .tn-value.green { color: #4ade80; }
+    .thresh-num .tn-value.amber { color: #fbbf24; }
+    .thresh-num .tn-sub { font-size: 0.7rem; color: #475569; margin-top: 1px; }
+
+    .thresh-arrow {
+      text-align: center; font-size: 0.8rem; color: #475569;
+      margin: 4px 0 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .overall-status {
+      margin-top: 16px; border-radius: 10px; padding: 14px;
+      text-align: center; font-size: 0.9rem; font-weight: 700;
+    }
+    .overall-status.keep   { background: #450a0a33; border: 1px solid #ef444444; color: #f87171; }
+    .overall-status.release { background: #14532d33; border: 1px solid #16a34a44; color: #4ade80; }
+
+    .price-loading {
+      text-align: center; padding: 24px; font-size: 0.875rem; color: #64748b;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .price-error { text-align: center; padding: 20px; font-size: 0.875rem; color: #f87171; }
+
+    /* Info */
+    .info-card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 16px; padding: 24px;
+    }
+    .info-card h3 { font-size: 0.875rem; font-weight: 600; color: #94a3b8; margin-bottom: 14px; }
+    .stage-list { display: flex; flex-direction: column; gap: 8px; }
+    .stage-item { display: flex; align-items: center; gap: 12px; font-size: 0.8125rem; }
+    .stage-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-attention { background: #eab308; }
+    .dot-warning   { background: #f97316; }
+    .dot-risk      { background: #ef4444; }
+    .stage-text { color: #94a3b8; }
+    .stage-text strong { color: #e2e8f0; }
+
+    .footnote {
+      text-align: center; font-size: 0.75rem; color: #475569; margin-top: 20px;
+    }
+
+    @media (max-width: 480px) {
+      .date-grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.375rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">KRX 시장경보제도</div>
+    <h1>투자경고 해제일 계산기</h1>
+    <p>한국거래소 기준 투자경고/위험 종목 해제일을 자동 계산합니다</p>
+  </div>
+
+  <!-- 서버 필요 안내 -->
+  <div class="server-notice" id="serverNotice">
+    ℹ️ <strong>자동검색 기능</strong>을 사용하려면 로컬 서버가 필요합니다.<br/>
+    터미널에서 <code style="background:#0f172a;padding:2px 6px;border-radius:4px;color:#93c5fd;">python3 serve.py</code> 실행 후 새로고침하세요.
+    KRX KIND에서 실시간으로 투자경고 지정일을 조회합니다.
+  </div>
+
+  <div class="card">
+    <h2>🔍 종목 자동검색 <span style="font-size:0.75rem;color:#64748b;font-weight:400;">(KRX KIND 실시간 조회)</span></h2>
+
+    <div class="form-group">
+      <label>종목명으로 검색</label>
+      <div class="search-row">
+        <input
+          type="text" id="searchInput"
+          placeholder="종목명 입력 후 검색 (예: 에코프로, 셀트리온)"
+          onkeydown="if(event.key==='Enter') doSearch()"
+        />
+        <button class="search-btn" id="searchBtn" onclick="doSearch()">KRX 조회</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 종목 정보 입력</h2>
+
+    <div class="form-group">
+      <label for="stockName">종목명</label>
+      <input type="text" id="stockName" placeholder="예: 삼성전자, 카카오" />
+      <div id="autoFilledTag" style="display:none;">
+        <span class="auto-filled-tag">✓ KRX KIND에서 자동 입력됨</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="designationDate">지정일 (투자경고/위험 지정일)</label>
+      <input type="date" id="designationDate" />
+    </div>
+
+    <div class="form-group">
+      <label for="warningType">경보 유형</label>
+      <select id="warningType">
+        <option value="warning_normal">투자경고 — 일반 급등 유형 (초단기·단기·중장기·반복)</option>
+        <option value="warning_unfair">투자경고 — 불건전거래 동반 유형</option>
+        <option value="risk">투자위험종목</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="tradingStop">매매거래 정지 여부</label>
+      <select id="tradingStop">
+        <option value="no">없음 (정지 없이 지정)</option>
+        <option value="yes1">있음 — 지정일 당일 1일 정지</option>
+        <option value="yes2">있음 — 지정 후 추가 정지 포함 (직접 날짜 입력)</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="resumeDateGroup" style="display:none;">
+      <label for="resumeDate">매매거래 재개일</label>
+      <input type="date" id="resumeDate" />
+    </div>
+
+    <button class="btn" onclick="calculate()">해제 예상일 계산하기</button>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <h2>📊 계산 결과</h2>
+    </div>
+    <div class="stock-name-display" id="stockNameDisplay"></div>
+    <div class="date-grid">
+      <div class="date-item">
+        <div class="label">지정일</div>
+        <div class="value" id="resultDesignationDate"></div>
+      </div>
+      <div class="date-item">
+        <div class="label">기산 시작일</div>
+        <div class="value" id="resultStartDate"></div>
+      </div>
+      <div class="date-item highlight">
+        <div class="label">해제 가능 최초일 (10 거래일 경과 후)</div>
+        <div class="value" id="resultReleaseDate"></div>
+      </div>
+      <div class="date-item">
+        <div class="label">경과 거래일 (오늘 기준)</div>
+        <div class="value" id="resultElapsed"></div>
+      </div>
+    </div>
+    <div id="ddayBadge"></div>
+    <hr class="divider" />
+    <div class="conditions-title">해제 요건 — 아래 3가지가 <em>모두</em> 충족될 때 경고 유지 (1가지라도 미충족 시 다음날 해제)</div>
+    <div id="conditionList"></div>
+    <div class="warning-box">
+      ⚠️ 3가지 조건은 <strong>AND 조건</strong>입니다. 3가지가 동시에 모두 충족되면 경고가 유지되고,
+      <strong>1가지라도 충족되지 않는 날의 다음 거래일</strong>에 해제됩니다.
+      (단, 지정 후 최소 10 거래일이 경과해야 해제 심사 대상이 됩니다.)
+    </div>
+  </div>
+
+  <!-- 기준가 현황 -->
+  <div class="price-card" id="priceCard">
+    <h2>📈 기준가 현황 <span style="font-size:0.75rem;color:#64748b;font-weight:400;">(네이버 금융 실시간)</span></h2>
+    <div class="price-meta" id="priceMeta"></div>
+    <div id="priceContent"></div>
+  </div>
+
+  <!-- Info -->
+  <div class="info-card">
+    <h3>시장경보 단계 안내</h3>
+    <div class="stage-list">
+      <div class="stage-item">
+        <div class="stage-dot dot-attention"></div>
+        <div class="stage-text"><strong>투자주의</strong> — 단기 급등 초기 단계, 15일 내 5일 이상 지정 시 경고로 격상 가능</div>
+      </div>
+      <div class="stage-item">
+        <div class="stage-dot dot-warning"></div>
+        <div class="stage-text"><strong>투자경고</strong> — 신용융자 금지, 위탁증거금 100% 현금, 지정 후 10 거래일 이후 해제 심사</div>
+      </div>
+      <div class="stage-item">
+        <div class="stage-dot dot-risk"></div>
+        <div class="stage-text"><strong>투자위험</strong> — 가장 높은 단계, 지정 당일 거래 정지, 해제 후 투자경고로 하향</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    본 계산기는 참고용이며, 실제 해제일은 KRX 시장감시위원회 판단에 따릅니다.<br />
+    공식 현황: <strong>KIND (kind.krx.co.kr)</strong> · <strong>DART (dart.fss.or.kr)</strong> · <strong>KRX 시장감시위원회 (moc.krx.co.kr)</strong>
+  </div>
+
+</div>
+
+<script>
+// ────────────────────────────────────────────────
+// 서버 상태 확인
+// ────────────────────────────────────────────────
+const SERVER_BASE = window.location.hostname === 'localhost' ||
+                    window.location.hostname === '127.0.0.1'
+  ? ''   // 같은 서버
+  : null; // 서버 없음 (파일로 직접 열었을 때)
+
+async function checkServer() {
+  if (SERVER_BASE === null) {
+    document.getElementById('serverNotice').classList.add('show');
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchBtn').title = '로컬 서버를 먼저 실행하세요';
+    return false;
+  }
+  return true;
+}
+
+checkServer();
+
+// ────────────────────────────────────────────────
+// KRX KIND 검색
+// ────────────────────────────────────────────────
+async function doSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) { alert('종목명을 입력하세요.'); return; }
+
+  if (SERVER_BASE === null) {
+    alert('로컬 서버가 필요합니다.\n터미널에서 python3 serve.py 를 실행한 뒤 다시 시도하세요.');
+    return;
+  }
+
+  const resultsEl = document.getElementById('searchResults');
+  const btn = document.getElementById('searchBtn');
+
+  btn.disabled = true;
+  btn.textContent = '조회 중...';
+  resultsEl.innerHTML = '<div class="search-loading">KRX KIND에서 데이터를 가져오는 중...</div>';
+  resultsEl.classList.add('show');
+
+  try {
+    const url = `/api/warn-search?name=${encodeURIComponent(query)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.error) {
+      resultsEl.innerHTML = `<div class="result-empty">⚠️ ${data.error}</div>`;
+      return;
+    }
+
+    const results = data.results || [];
+    if (results.length === 0) {
+      resultsEl.innerHTML = `
+        <div class="result-empty">
+          "${query}" 종목의 투자경고/위험 지정 이력이 없습니다.<br/>
+          <small style="color:#334155">최근 1년 이내 지정 이력이 없거나 종목명을 확인해주세요.</small>
+        </div>`;
+      return;
+    }
+
+    renderSearchResults(results);
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="result-empty">⚠️ 서버 연결 오류: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'KRX 조회';
+  }
+}
+
+function renderSearchResults(results) {
+  const resultsEl = document.getElementById('searchResults');
+  const levelClass = { '투자경고': 'level-warning', '투자위험': 'level-risk', '투자주의': 'level-attention' };
+
+  const header = `<div class="search-results-header">${results.length}건의 지정 이력 — 항목을 클릭하면 자동 입력됩니다</div>`;
+
+  const items = results.map(r => {
+    const lc = levelClass[r.level] || 'level-warning';
+    return `
+      <div class="result-item" onclick="selectResult(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+        <div class="result-item-left">
+          <span class="result-stock-name">${r.stockName || '—'}</span>
+          <span class="result-level-badge ${lc}">${r.level}</span>
+        </div>
+        <div class="result-date">${r.designationDate}</div>
+      </div>`;
+  }).join('');
+
+  resultsEl.innerHTML = header + items;
+}
+
+function selectResult(r) {
+  document.getElementById('stockName').value = r.stockName || document.getElementById('searchInput').value;
+  document.getElementById('designationDate').value = r.designationDate;
+  document.getElementById('warningType').value = r.level === '투자위험' ? 'risk' : 'warning_normal';
+  document.getElementById('autoFilledTag').style.display = 'block';
+  document.getElementById('searchResults').classList.remove('show');
+
+  document.getElementById('stockName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(calculate, 300);
+
+  // 기준가 조회 (종목명으로 코드 검색 후 가격 fetch)
+  fetchPriceThresholds(r.stockName);
+}
+
+// ────────────────────────────────────────────────
+// 기준가 조회
+// ────────────────────────────────────────────────
+async function fetchPriceThresholds(stockName) {
+  const card    = document.getElementById('priceCard');
+  const meta    = document.getElementById('priceMeta');
+  const content = document.getElementById('priceContent');
+
+  card.classList.add('show');
+  meta.textContent = '';
+  content.innerHTML = '<div class="price-loading">네이버 금융에서 주가 데이터 조회 중...</div>';
+
+  try {
+    // 1. 종목코드 검색
+    const codeResp = await fetch(`/api/stock-code?name=${encodeURIComponent(stockName)}`);
+    const codeData = await codeResp.json();
+    if (codeData.error || !codeData.items || codeData.items.length === 0) {
+      content.innerHTML = `<div class="price-error">종목코드를 찾을 수 없습니다: ${stockName}</div>`;
+      return;
+    }
+    const item = codeData.items[0];
+    const code = item.code;
+
+    // 2. 일별 주가 + 기준가 계산
+    const priceResp = await fetch(`/api/stock-price?code=${code}`);
+    const priceData = await priceResp.json();
+    if (priceData.error) {
+      content.innerHTML = `<div class="price-error">⚠️ ${priceData.error}</div>`;
+      return;
+    }
+
+    const t = priceData.thresholds;
+    if (t.error) {
+      content.innerHTML = `<div class="price-error">⚠️ ${t.error}</div>`;
+      return;
+    }
+
+    meta.innerHTML = `종목코드: <strong>${code}</strong> (${item.market}) &nbsp;|&nbsp; 판단일(T): <strong>${t.tDate}</strong> &nbsp;|&nbsp; 현재 종가: <strong>${t.tClose.toLocaleString()}원</strong>`;
+    renderThresholds(t);
+
+  } catch (e) {
+    content.innerHTML = `<div class="price-error">⚠️ 가격 조회 오류: ${e.message}</div>`;
+  }
+}
+
+function fmt(n) { return n.toLocaleString() + '원'; }
+
+function renderThresholds(t) {
+  const content = document.getElementById('priceContent');
+
+  function row(num, label, baseDate, baseClose, ratio, thresh, tClose, met) {
+    const statusCls  = met ? 'active'   : 'inactive';
+    const statusTxt  = met ? '● 경고 유지' : '○ 미충족 → 해제 가능';
+    const threshCls  = met ? 'red'      : 'green';
+    const tcloseCls  = met ? 'red'      : 'green';
+    return `
+      <div class="thresh-row">
+        <div class="thresh-row-top">
+          <span class="thresh-label">조건 ${num} — ${label}</span>
+          <span class="thresh-status ${statusCls}">${statusTxt}</span>
+        </div>
+        <div class="thresh-numbers">
+          <div class="thresh-num">
+            <div class="tn-label">기준일(${baseDate}) 종가</div>
+            <div class="tn-value amber">${fmt(baseClose)}</div>
+            <div class="tn-sub">× ${ratio}</div>
+          </div>
+          <div class="thresh-num">
+            <div class="tn-label">경고 유지 기준가</div>
+            <div class="tn-value ${threshCls}">${fmt(thresh)}</div>
+            <div class="tn-sub">이상이면 경고 유지</div>
+          </div>
+          <div class="thresh-num">
+            <div class="tn-label">판단일(T) 종가</div>
+            <div class="tn-value ${tcloseCls}">${fmt(tClose)}</div>
+            <div class="tn-sub">${met ? '≥ 기준가' : '< 기준가'}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function row3(max15, max15Date, tClose, met) {
+    const statusCls = met ? 'active'   : 'inactive';
+    const statusTxt = met ? '● 경고 유지' : '○ 미충족 → 해제 가능';
+    const valCls    = met ? 'red'      : 'green';
+    return `
+      <div class="thresh-row">
+        <div class="thresh-row-top">
+          <span class="thresh-label">조건 ③ — 최근 15일 종가 중 최고가</span>
+          <span class="thresh-status ${statusCls}">${statusTxt}</span>
+        </div>
+        <div class="thresh-numbers">
+          <div class="thresh-num">
+            <div class="tn-label">최근 15일 최고가</div>
+            <div class="tn-value amber">${fmt(max15)}</div>
+            <div class="tn-sub">${max15Date}</div>
+          </div>
+          <div class="thresh-num">
+            <div class="tn-label">경고 유지 기준가</div>
+            <div class="tn-value ${valCls}">${fmt(max15)}</div>
+            <div class="tn-sub">이상(= 최고가)이면 경고 유지</div>
+          </div>
+          <div class="thresh-num">
+            <div class="tn-label">판단일(T) 종가</div>
+            <div class="tn-value ${valCls}">${fmt(tClose)}</div>
+            <div class="tn-sub">${met ? '= 최고가' : '< 최고가'}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  const allMet = t.cond1 && t.cond2 && t.cond3;
+  const overallCls = allMet ? 'keep' : 'release';
+  const overallTxt = allMet
+    ? '⚠️ 3가지 조건 모두 충족 → 투자경고 유지 중'
+    : `✅ 조건 ${[!t.cond1?'①':'', !t.cond2?'②':'', !t.cond3?'③':''].filter(Boolean).join('·')} 미충족 → 해제 요건 발생 (10 거래일 경과 후 적용)`;
+
+  content.innerHTML =
+    row('①', 'T-5 종가 대비 45% 이상 상승 여부', t.t5Date,  t.t5Close,  '1.45', t.thresh1, t.tClose, t.cond1) +
+    row('②', 'T-15 종가 대비 75% 이상 상승 여부', t.t15Date, t.t15Close, '1.75', t.thresh2, t.tClose, t.cond2) +
+    row3(t.max15, t.max15Date, t.tClose, t.cond3) +
+    `<div class="overall-status ${overallCls}">${overallTxt}</div>`;
+}
+
+// ────────────────────────────────────────────────
+// 공휴일 (2023~2027)
+// ────────────────────────────────────────────────
+const HOLIDAYS = new Set([
+  // 2023
+  '2023-01-01','2023-01-21','2023-01-22','2023-01-23','2023-01-24',
+  '2023-03-01','2023-05-05','2023-05-27','2023-06-06','2023-08-15',
+  '2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09',
+  '2023-12-25',
+  // 2024
+  '2024-01-01','2024-02-09','2024-02-10','2024-02-11','2024-02-12',
+  '2024-03-01','2024-04-10',
+  '2024-05-01','2024-05-05','2024-05-06','2024-05-15',
+  '2024-06-06','2024-08-15',
+  '2024-09-16','2024-09-17','2024-09-18',
+  '2024-10-03','2024-10-09','2024-12-25',
+  // 2025
+  '2025-01-01','2025-01-28','2025-01-29','2025-01-30',
+  '2025-03-01','2025-03-03',
+  '2025-05-01','2025-05-05','2025-05-06',
+  '2025-06-03','2025-06-06','2025-08-15',
+  '2025-10-03','2025-10-05','2025-10-06','2025-10-07','2025-10-08','2025-10-09',
+  '2025-12-25',
+  // 2026
+  '2026-01-01','2026-02-16','2026-02-17','2026-02-18','2026-02-19',
+  '2026-03-01','2026-03-02',
+  '2026-05-01','2026-05-05','2026-05-25',
+  '2026-06-06','2026-08-17',
+  '2026-09-24','2026-09-25',
+  '2026-10-03','2026-10-05','2026-10-09','2026-12-25',
+  // 2027
+  '2027-01-01','2027-02-06','2027-02-07','2027-02-08','2027-02-09',
+  '2027-03-01',
+  '2027-05-05','2027-05-13','2027-06-06','2027-08-16',
+  '2027-10-03','2027-10-04','2027-10-05','2027-10-09','2027-12-25',
+]);
+
+function toDateStr(d) { return d.toISOString().slice(0, 10); }
+function isHoliday(d) { return HOLIDAYS.has(toDateStr(d)); }
+function isWeekend(d) { const day = d.getDay(); return day === 0 || day === 6; }
+function isTradingDay(d) { return !isWeekend(d) && !isHoliday(d); }
+
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function addTradingDays(start, n) {
+  let count = 0, cur = new Date(start);
+  while (count < n) { cur = addDays(cur, 1); if (isTradingDay(cur)) count++; }
+  return cur;
+}
+
+function countTradingDays(start, end) {
+  let count = 0, cur = new Date(start);
+  while (cur <= end) { if (isTradingDay(cur)) count++; cur = addDays(cur, 1); }
+  return count;
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+}
+
+// ────────────────────────────────────────────────
+// 이벤트
+// ────────────────────────────────────────────────
+document.getElementById('tradingStop').addEventListener('change', function () {
+  document.getElementById('resumeDateGroup').style.display =
+    this.value === 'yes2' ? 'block' : 'none';
+});
+
+document.getElementById('designationDate').value = new Date().toISOString().slice(0, 10);
+
+// 외부 클릭 시 검색 결과 닫기
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.form-group')) {
+    document.getElementById('searchResults').classList.remove('show');
+  }
+});
+
+// ────────────────────────────────────────────────
+// 계산
+// ────────────────────────────────────────────────
+function calculate() {
+  const stockName        = document.getElementById('stockName').value.trim();
+  const designationDateStr = document.getElementById('designationDate').value;
+  const warningType      = document.getElementById('warningType').value;
+  const tradingStop      = document.getElementById('tradingStop').value;
+  const resumeDateStr    = document.getElementById('resumeDate').value;
+
+  if (!stockName)          { alert('종목명을 입력해주세요.'); return; }
+  if (!designationDateStr) { alert('지정일을 입력해주세요.');  return; }
+
+  const designationDate = new Date(designationDateStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  let startDate;
+  if (tradingStop === 'yes2') {
+    if (!resumeDateStr) { alert('매매거래 재개일을 입력해주세요.'); return; }
+    startDate = new Date(resumeDateStr + 'T00:00:00');
+  } else {
+    startDate = new Date(designationDate);
+  }
+
+  const releaseDate = addTradingDays(startDate, 10);
+
+  let elapsed;
+  if (today < startDate) {
+    elapsed = '아직 기산 전';
+  } else {
+    const count = countTradingDays(startDate, today);
+    elapsed = (count - 1) + ' 거래일 경과';
+  }
+
+  const diffMs   = releaseDate.getTime() - today.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  let ddayText, ddayClass;
+  if (diffDays < 0) {
+    ddayText = '해제 심사 기간 경과 (조건 충족 시 해제 완료 또는 진행 중)';
+    ddayClass = 'past';
+  } else if (diffDays === 0) {
+    ddayText = '오늘이 최초 해제 가능일 (D-Day)';
+    ddayClass = 'today';
+  } else {
+    ddayText = `D-${diffDays} (해제 가능일까지 ${diffDays}일 남음)`;
+    ddayClass = 'future';
+  }
+
+  document.getElementById('stockNameDisplay').textContent       = stockName;
+  document.getElementById('resultDesignationDate').textContent  = formatDate(designationDate);
+  document.getElementById('resultStartDate').textContent        = formatDate(startDate);
+  document.getElementById('resultReleaseDate').textContent      = formatDate(releaseDate);
+  document.getElementById('resultElapsed').textContent          = elapsed;
+  document.getElementById('ddayBadge').innerHTML =
+    `<div class="dday-badge ${ddayClass}">${ddayText}</div>`;
+
+  const conditions = getConditions(warningType);
+  document.getElementById('conditionList').innerHTML = conditions.map(c =>
+    `<div class="condition-item"><div class="icon">✓</div><div>${c}</div></div>`
+  ).join('');
+
+  document.getElementById('resultCard').classList.add('show');
+  document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function getConditions(type) {
+  const base = [
+    '지정일로부터 <strong>10 매매거래일</strong> 경과 후 아래 요건 심사',
+    '[유지 조건 ①] 판단일(T) 종가 ≥ T-5 종가 × 1.45 &nbsp;<span style="color:#64748b;font-size:0.75em">(5일 전 대비 45% 이상 상승)</span>',
+    '[유지 조건 ②] 판단일(T) 종가 ≥ T-15 종가 × 1.75 &nbsp;<span style="color:#64748b;font-size:0.75em">(15일 전 대비 75% 이상 상승)</span>',
+    '[유지 조건 ③] 판단일(T) 종가 = 최근 15일 종가 중 최고가',
+    '→ ①②③이 <strong>모두 충족</strong>되면 경고 <strong>유지</strong> / <strong>하나라도 미충족</strong>이면 다음날 <strong>해제</strong>',
+  ];
+  if (type === 'risk') return [
+    ...base,
+    '투자위험종목 해제 후 → 자동으로 <strong>투자경고종목으로 하향 지정</strong>',
+    '이후 위 3가지 요건을 모두 충족하지 않는 날의 다음날 최종 해제',
+  ];
+  return base;
+}
+</script>
+</body>
+</html>
