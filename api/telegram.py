@@ -149,68 +149,71 @@ def calc_thresholds(prices: list) -> dict:
     }
 
 # ── 메시지 포맷 ──────────────────────────────────────────────
-def fmt_price(n: int) -> str:
-    return f'{n:,}원'
-
-def fmt_date(s: str) -> str:
-    """YYYY-MM-DD → M월 D일"""
-    try:
-        d = date.fromisoformat(s)
-        days = ['월','화','수','목','금','토','일']
-        return f'{d.month}월 {d.day}일({days[d.weekday()]})'
-    except Exception:
-        return s
+def sd(d: date) -> str:
+    """date → M/D 형식"""
+    return f'{d.month}/{d.day}'
 
 def build_message(stock_name: str, warn: dict, thresholds: dict | None) -> str:
     d_str   = warn['designationDate']
     d_date  = date.fromisoformat(d_str)
     today   = date.today()
     release = add_trading_days(d_date, 10)
-
     elapsed = count_trading_days(d_date, today) - 1
     diff    = (release - today).days
 
-    if diff < 0:
-        dday = '⏰ 해제 심사 기간 경과 (조건 충족 시 해제)'
+    if diff > 0:
+        dday = f'D-{diff}'
     elif diff == 0:
-        dday = '🔔 오늘이 최초 해제 가능일 (D-Day)'
+        dday = 'D-Day'
     else:
-        dday = f'⏳ D-{diff} — 해제 가능일까지 {diff}일 남음'
+        dday = f'D+{abs(diff)}'
 
     level_emoji = '🟠' if warn['level'] == '투자경고' else '🔴'
 
-    lines = [
-        f'{level_emoji} *{stock_name}* [{warn["level"]}]',
-        '',
-        f'📅 지정일: {fmt_date(d_str)}',
-        f'📅 해제 가능 최초일: *{fmt_date(release.strftime("%Y-%m-%d"))}*',
-        f'📊 경과 거래일: {elapsed}일 / 10일',
-        f'{dday}',
-    ]
+    # ── 헤더 ─────────────────────────────────────────────────
+    lines = [f'{level_emoji} {stock_name} {warn["level"]}  |  {dday}', '']
 
-    if thresholds:
+    # ── 코드블록 (모노스페이스 정렬) ─────────────────────────
+    if thresholds and 'error' not in thresholds:
+        t_d   = date.fromisoformat(thresholds['tDate'])
+        cur   = thresholds['tClose']
         c1, c2, c3 = thresholds['cond1'], thresholds['cond2'], thresholds['cond3']
-        all_met     = thresholds['allMet']
-        cur         = thresholds['tClose']
+        ci    = lambda c: '✅' if c else '❌'
 
-        lines += [
+        p1 = f"{thresholds['thresh1']:,}원"
+        p2 = f"{thresholds['thresh2']:,}원"
+        p3 = f"{thresholds['thresh3']:,}원"
+        # 기준가 최대 길이 맞춤
+        pw = max(len(p1), len(p2), len(p3))
+
+        block = '\n'.join([
+            f'현재가  {cur:,}원  ({sd(t_d)})',
+            f'지정일  {sd(d_date)}  →  해제가능  {sd(release)}',
+            f'경과    {elapsed} / 10 거래일',
             '',
-            f'💰 현재가: *{fmt_price(cur)}* ({thresholds["tDate"]})',
-            '',
-            '📋 *경고 유지 조건* (3가지 모두 해당해야 유지)',
-            f'{"✅" if c1 else "❌"} ① T-5 종가의 145% 이상: {fmt_price(thresholds["thresh1"])} ({thresholds["t5Date"]})',
-            f'{"✅" if c2 else "❌"} ② T-15 종가의 175% 이상: {fmt_price(thresholds["thresh2"])} ({thresholds["t15Date"]})',
-            f'{"✅" if c3 else "❌"} ③ 최근 15일 최고가 이상: {fmt_price(thresholds["thresh3"])} ({thresholds["max15Date"]})',
-            '',
-        ]
-        if all_met:
-            lines.append('🔴 *경고 유지 중* — 3가지 조건 모두 충족')
+            f'{"조건":<6}{"기준가":<{pw+2}}결과',
+            '─' * (6 + pw + 6),
+            f'{"① T-5":<6}{p1:<{pw+2}}{ci(c1)}',
+            f'{"② T-15":<6}{p2:<{pw+2}}{ci(c2)}',
+            f'{"③ 고점":<6}{p3:<{pw+2}}{ci(c3)}',
+        ])
+        lines.append(f'```\n{block}\n```')
+        lines.append('')
+
+        # ── 요약 ─────────────────────────────────────────────
+        unmet = sum(1 for c in [c1, c2, c3] if not c)
+        if thresholds['allMet']:
+            lines.append('→ 3가지 모두 충족 · 경고 유지 중 🔴')
         else:
-            failed = []
-            if not c1: failed.append('①')
-            if not c2: failed.append('②')
-            if not c3: failed.append('③')
-            lines.append(f'🟢 *해제 조건 충족* — {", ".join(failed)} 미충족 → 다음 거래일 해제 가능')
+            lines.append(f'→ {unmet}가지 미충족 · 내일 해제 가능 🟢')
+    else:
+        block = '\n'.join([
+            f'지정일  {sd(d_date)}  →  해제가능  {sd(release)}',
+            f'경과    {elapsed} / 10 거래일',
+        ])
+        lines.append(f'```\n{block}\n```')
+        if thresholds and 'error' in thresholds:
+            lines.append(f'⚠️ 주가 조회 불가: {thresholds["error"]}')
 
     return '\n'.join(lines)
 
