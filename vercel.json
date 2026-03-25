@@ -1,5 +1,10 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
-  ]
+  ],
+  "functions": {
+    "api/telegram.py": { "maxDuration": 60 },
+    "api/warn-search.py": { "maxDuration": 30 },
+    "api/stock-price.py": { "maxDuration": 30 }
+  }
 }

@@ -71,7 +71,7 @@ def search_kind(stock_name: str) -> list:
             req = urllib.request.Request(
                 f'https://kind.krx.co.kr/investwarn/investattentwarnrisky.do?{params}',
                 headers=HEADERS_HTML)
-            with urllib.request.urlopen(req, timeout=12) as r:
+            with urllib.request.urlopen(req, timeout=8) as r:
                 html = r.read().decode('utf-8', errors='replace')
             tbody_m = re.search(r'<tbody>(.*?)</tbody>', html, re.DOTALL)
             if not tbody_m:
@@ -114,7 +114,7 @@ def fetch_prices(code: str, count: int = 20) -> list:
     url = (f'https://fchart.stock.naver.com/sise.nhn'
            f'?symbol={code}&timeframe=day&count={count}&requestType=0')
     req = urllib.request.Request(url, headers=HEADERS_NAVER)
-    with urllib.request.urlopen(req, timeout=10) as r:
+    with urllib.request.urlopen(req, timeout=7) as r:
         raw = r.read().decode('euc-kr', errors='replace')
     root   = ET.fromstring(raw)
     prices = []
@@ -260,7 +260,10 @@ def process_update(update: dict):
         return
 
     # 종목 검색
-    tg_send_plain(chat_id, f'🔍 "{text}" 검색 중...')
+    try:
+        tg_send_plain(chat_id, f'🔍 "{text}" 검색 중...')
+    except Exception:
+        pass  # 검색 중 메시지 실패해도 계속 진행
 
     try:
         results = search_kind(text)
@@ -290,8 +293,11 @@ def process_update(update: dict):
 
         try:
             tg_send(chat_id, build_message(stock_name, warn, thresholds))
-        except Exception as e:
-            tg_send_plain(chat_id, build_message(stock_name, warn, thresholds))
+        except Exception:
+            try:
+                tg_send_plain(chat_id, build_message(stock_name, warn, thresholds))
+            except Exception as e:
+                tg_send_plain(chat_id, f'⚠️ 결과 전송 오류: {e}')
 
     if len(results) > 3:
         tg_send_plain(chat_id,
