@@ -207,9 +207,9 @@ def build_message(stock_name: str, warn: dict, thresholds: dict | None) -> str:
         # ── 요약 ─────────────────────────────────────────────
         unmet = sum(1 for c in [c1, c2, c3] if not c)
         if thresholds['allMet']:
-            lines.append('→ 3가지 모두 충족 · 경고 유지 중 🔴')
+            lines.append('→ 3가지 모두 해당 · 경고 유지 중 🔴')
         else:
-            lines.append(f'→ {unmet}가지 미충족 · {sd(release)} 해제 가능 🟢')
+            lines.append(f'→ {unmet}가지 미해당 · {sd(release)} 해제 가능 🟢')
     else:
         block = '\n'.join([
             f'지정일  {sd(d_date)}  →  해제가능  {sd(release)}',
@@ -330,7 +330,7 @@ def process_update(update: dict):
             '*2. 전체 목록 조회*\n'
             '`/warning_all` — 현재 투자경고/위험 지정 종목 전체\n\n'
             '*해제 조건 안내*\n'
-            '아래 3가지 중 하나라도 불충족 시 다음 거래일 해제:\n'
+            '아래 3가지 중 하나라도 미해당 시 다음 거래일 해제:\n'
             '① 현재가 ≥ T\\-5 종가의 145%\n'
             '② 현재가 ≥ T\\-15 종가의 175%\n'
             '③ 현재가 ≥ 최근 15일 최고가\n\n'
