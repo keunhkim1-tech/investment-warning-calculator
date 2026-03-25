@@ -337,7 +337,6 @@ def process_update(update: dict):
             '투자경고/위험 종목의 해제 예상일과 기준가를 알려드립니다.\n\n'
             '*명령어*\n'
             '/warning `종목명` — 종목 투자경고 조회\n'
-            '/warning\_all — 전체 투자경고/위험 종목 목록\n'
             '/help — 사용법 안내\n\n'
             '또는 종목명을 바로 입력해도 됩니다.\n'
             '예: `코셈`, `레이저쎌`'
@@ -351,8 +350,6 @@ def process_update(update: dict):
             '*1. 종목 검색*\n'
             '`/warning 종목명` 또는 종목명을 직접 입력\n'
             '예: `/warning 코셈` 또는 `코셈`\n\n'
-            '*2. 전체 목록 조회*\n'
-            '`/warning_all` — 현재 투자경고/위험 지정 종목 전체\n\n'
             '*해제 조건 안내*\n'
             '아래 3가지 중 하나라도 미해당 시 다음 거래일 해제:\n'
             '① 현재가 ≥ T\\-5 종가의 145%\n'
@@ -363,45 +360,9 @@ def process_update(update: dict):
         return
 
     # ── /warning 종목명 ──────────────────────────────────────
-    if text.startswith('/warning') and not text.startswith('/warning_'):
+    if text.startswith('/warning'):
         query = re.sub(r'^/\S+\s*', '', text).strip()
         do_search(chat_id, query)
-        return
-
-    # ── /warning_all ─────────────────────────────────────────
-    if text.startswith('/warning_all'):
-        try:
-            tg_send_plain(chat_id, '📋 전체 투자경고/위험 종목 조회 중...')
-        except Exception:
-            pass
-        try:
-            results = search_kind('')
-        except Exception as e:
-            tg_send_plain(chat_id, f'❌ KRX 조회 오류: {e}')
-            return
-
-        if not results:
-            tg_send_plain(chat_id, '현재 투자경고/위험 지정 종목이 없습니다.')
-            return
-
-        warning = [r for r in results if r['level'] == '투자경고']
-        risk    = [r for r in results if r['level'] == '투자위험']
-
-        lines = [f'📋 *투자경고/위험 전체 목록* ({date.today().strftime("%m/%d")} 기준)\n']
-        if risk:
-            lines.append('🔴 *투자위험*')
-            for r in risk:
-                lines.append(f'• {r["stockName"]} ({r["designationDate"]})')
-        if warning:
-            lines.append('\n🟠 *투자경고*')
-            for r in warning:
-                lines.append(f'• {r["stockName"]} ({r["designationDate"]})')
-
-        lines.append(f'\n총 {len(results)}개 종목 | /검색 종목명 으로 상세 조회')
-        try:
-            tg_send(chat_id, '\n'.join(lines))
-        except Exception:
-            tg_send_plain(chat_id, '\n'.join(lines))
         return
 
     # ── 알 수 없는 명령어 ────────────────────────────────────
