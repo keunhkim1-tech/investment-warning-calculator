@@ -241,7 +241,7 @@ def tg_send_plain(chat_id: int, text: str):
 def do_search(chat_id: int, query: str):
     """종목 검색 공통 로직"""
     if not query:
-        tg_send_plain(chat_id, '종목명을 입력해주세요.\n예: /검색 코셈')
+        tg_send_plain(chat_id, '종목명을 입력해주세요.\n예: /warning 코셈')
         return
 
     try:
@@ -305,8 +305,8 @@ def process_update(update: dict):
             '📈 *투자경고 해제일 계산기*\n\n'
             '투자경고/위험 종목의 해제 예상일과 기준가를 알려드립니다.\n\n'
             '*명령어*\n'
-            '/search `종목명` — 종목 투자경고 조회\n'
-            '/all — 전체 투자경고/위험 종목 목록\n'
+            '/warning `종목명` — 종목 투자경고 조회\n'
+            '/warning\_all — 전체 투자경고/위험 종목 목록\n'
             '/help — 사용법 안내\n\n'
             '또는 종목명을 바로 입력해도 됩니다.\n'
             '예: `코셈`, `레이저쎌`'
@@ -318,10 +318,10 @@ def process_update(update: dict):
         tg_send(chat_id,
             '📖 *사용법*\n\n'
             '*1. 종목 검색*\n'
-            '`/search 종목명` 또는 종목명을 직접 입력\n'
-            '예: `/search 코셈` 또는 `코셈`\n\n'
+            '`/warning 종목명` 또는 종목명을 직접 입력\n'
+            '예: `/warning 코셈` 또는 `코셈`\n\n'
             '*2. 전체 목록 조회*\n'
-            '`/all` — 현재 투자경고/위험 지정 종목 전체\n\n'
+            '`/warning_all` — 현재 투자경고/위험 지정 종목 전체\n\n'
             '*해제 조건 안내*\n'
             '아래 3가지 중 하나라도 불충족 시 다음 거래일 해제:\n'
             '① 현재가 ≥ T\\-5 종가의 145%\n'
@@ -331,14 +331,14 @@ def process_update(update: dict):
         )
         return
 
-    # ── /검색 종목명 ─────────────────────────────────────────
-    if text.startswith('/search') or text.startswith('/검색'):
+    # ── /warning 종목명 ──────────────────────────────────────
+    if text.startswith('/warning') and not text.startswith('/warning_'):
         query = re.sub(r'^/\S+\s*', '', text).strip()
         do_search(chat_id, query)
         return
 
-    # ── /전체 ────────────────────────────────────────────────
-    if text.startswith('/all') or text.startswith('/전체'):
+    # ── /warning_all ─────────────────────────────────────────
+    if text.startswith('/warning_all'):
         try:
             tg_send_plain(chat_id, '📋 전체 투자경고/위험 종목 조회 중...')
         except Exception:
@@ -375,7 +375,7 @@ def process_update(update: dict):
 
     # ── 알 수 없는 명령어 ────────────────────────────────────
     if text.startswith('/'):
-        tg_send_plain(chat_id, '알 수 없는 명령어입니다.\n/도움말 로 사용법을 확인하세요.')
+        tg_send_plain(chat_id, '알 수 없는 명령어입니다.\n/help 로 사용법을 확인하세요.')
         return
 
     # ── 일반 텍스트 → 종목 검색 ──────────────────────────────
