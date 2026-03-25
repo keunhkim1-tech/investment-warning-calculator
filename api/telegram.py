@@ -183,19 +183,23 @@ def build_message(stock_name: str, warn: dict, thresholds: dict | None) -> str:
         p1 = f"{thresholds['thresh1']:,}원"
         p2 = f"{thresholds['thresh2']:,}원"
         p3 = f"{thresholds['thresh3']:,}원"
-        # 기준가 최대 길이 맞춤
+        # 가격 우측 정렬 기준폭
         pw = max(len(p1), len(p2), len(p3))
+        # 라벨 명시적 고정 (한글 2바이트 보정: 고점=4자지만 시각폭=T-15와 동일)
+        L1 = '① T-5 '   # 6자 → T-5(3) 보정용 공백 포함
+        L2 = '② T-15'   # 6자
+        L3 = '③ 고점'   # 4자지만 한글 시각폭으로 T-15와 유사
 
         block = '\n'.join([
             f'현재가  {cur:,}원  ({sd(t_d)})',
             f'지정일  {sd(d_date)}  →  해제가능  {sd(release)}',
             f'경과    {elapsed} / 10 거래일',
             '',
-            f'{"조건":<6}{"기준가":<{pw+2}}결과',
-            '─' * (6 + pw + 6),
-            f'{"① T-5":<6}{p1:<{pw+2}}{ci(c1)}',
-            f'{"② T-15":<6}{p2:<{pw+2}}{ci(c2)}',
-            f'{"③ 고점":<6}{p3:<{pw+2}}{ci(c3)}',
+            f'조건      {"기준가":>{pw}}   결과',
+            '─' * (8 + pw + 5),
+            f'{L1}  {p1:>{pw}}   {ci(c1)}',
+            f'{L2}  {p2:>{pw}}   {ci(c2)}',
+            f'{L3}  {p3:>{pw}}   {ci(c3)}',
         ])
         lines.append(f'```\n{block}\n```')
         lines.append('')
